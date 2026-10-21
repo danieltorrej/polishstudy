@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#4f46e5">
+  <title>Lingo Cards</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <button id="grammar-toggle" class="grammar-toggle" aria-controls="grammar-nav" aria-expanded="false">☰ Grammar</button>
+      <h1>Lingo Cards</h1>
+    </div>
+    <nav>
+      <button data-view="study" class="active">Study</button>
+      <button data-view="read">Read</button>
+      <button data-view="cards">My cards</button>
+    </nav>
+  </header>
+
+  <div class="layout">
+  <!-- Grammar topics: a sidebar on wide screens, a slide-in drawer on phones -->
+  <aside id="grammar-nav" class="grammar-nav" aria-label="Grammar topics">
+    <div class="grammar-nav-head">
+      <strong>Grammar</strong>
+      <button id="grammar-close" class="grammar-close" aria-label="Close grammar menu">✕</button>
+    </div>
+    <div id="grammar-topics"></div>
+  </aside>
+  <div id="grammar-backdrop" class="backdrop"></div>
+
+  <main>
+    <!-- Grammar page (a topic, or all forms of one word) -->
+    <section id="grammar" class="view">
+      <button id="grammar-back" class="link back-link"></button>
+      <article id="grammar-page" class="grammar-page"></article>
+    </section>
+
+    <!-- Study view -->
+    <section id="study" class="view active">
+      <p class="stats" id="stats"></p>
+
+      <div class="card" id="card" tabindex="0" aria-live="polite">
+        <div class="front" id="front"></div>
+        <div class="back hidden" id="back">
+          <div id="meaning"></div>
+          <div class="example" id="example">
+            <p class="sentence"></p>
+            <p class="translation"></p>
+          </div>
+        </div>
+      </div>
+
+      <button id="reveal" class="primary">Show answer</button>
+      <div id="grade" class="grade hidden">
+        <button data-grade="again" class="again">Again</button>
+        <button data-grade="good" class="good">Got it</button>
+      </div>
+
+      <div id="done" class="done hidden">
+        <p>🎉 Nothing due right now. Come back later or add more cards.</p>
+        <button id="study-all">Practice all anyway</button>
+      </div>
+    </section>
+
+    <!-- Reading view -->
+    <section id="read" class="view">
+      <div class="editor-bar editor-only">
+        <span><strong>Editor mode.</strong> New texts and meanings are drafts on this device until you export them.</span>
+        <button id="export-content">Export content file</button>
+      </div>
+
+      <div class="text-bar">
+        <select id="text-picker" aria-label="Choose a text"></select>
+        <button id="new-text" class="editor-only">+ New text</button>
+      </div>
+
+      <form id="text-form" class="hidden">
+        <input id="text-title" placeholder="Title (e.g. Moja rodzina)" required autocomplete="off">
+        <input id="text-title-en" placeholder="English title, optional (e.g. My family)" autocomplete="off">
+        <textarea id="text-body" rows="7" placeholder="Paste or type Polish text…" required></textarea>
+        <textarea id="text-translation" rows="4" placeholder="English translation, optional. With the same number of sentences, each sentence gets its own translation."></textarea>
+        <div class="form-actions">
+          <button type="button" id="cancel-text">Cancel</button>
+          <button class="primary" type="submit">Save text</button>
+        </div>
+      </form>
+
+      <div id="reading-body">
+        <div>
+          <h2 id="reading-title"></h2>
+          <p class="stats" id="reading-subtitle"></p>
+        </div>
+        <p class="reading-text" id="reading-text"></p>
+        <p class="hint" id="reading-help">
+          Tap any word to see what it means.
+          <span class="key key-known">dotted</span> = already in your cards.
+          <span class="editor-only"><span class="key key-new">dashed</span> = no meaning yet, tap to add one.</span>
+        </p>
+        <details id="translation-box">
+          <summary>Show English translation</summary>
+          <div id="reading-translation"></div>
+        </details>
+        <button id="delete-text" class="link editor-only">Delete this draft</button>
+      </div>
+    </section>
+
+    <!-- Card management view -->
+    <section id="cards" class="view">
+      <form id="add-form">
+        <input id="new-front" placeholder="Word or phrase (e.g. pies)" required autocomplete="off">
+        <input id="new-back" placeholder="Meaning (e.g. dog)" required autocomplete="off">
+        <input id="new-example" placeholder="Example sentence, optional (e.g. Mam małego *psa*.)" autocomplete="off">
+        <input id="new-example-en" placeholder="Sentence translation, optional (e.g. I have a small dog.)" autocomplete="off">
+        <button class="primary" type="submit">Add card</button>
+      </form>
+      <ul id="card-list"></ul>
+      <button id="reset" class="link">Reset to starter deck</button>
+    </section>
+  </main>
+  </div>
+
+  <!-- Word details for reading mode -->
+  <aside id="sheet" class="sheet hidden" aria-live="polite">
+    <button id="sheet-close" class="sheet-close" aria-label="Close">✕</button>
+    <div id="sheet-view" class="sheet-section">
+      <div class="sheet-head">
+        <span id="sheet-word" class="sheet-word"></span>
+        <span id="sheet-form" class="sheet-form"></span>
+      </div>
+      <p id="sheet-meaning" class="sheet-meaning"></p>
+      <p id="sheet-note" class="sheet-note"></p>
+      <div id="sheet-links" class="sheet-links hidden"></div>
+    </div>
+    <form id="sheet-edit" class="sheet-section hidden">
+      <p id="edit-heading" class="sheet-edit-heading"></p>
+      <input id="edit-lemma" placeholder="Dictionary form (e.g. pies)" aria-label="Dictionary form" required autocomplete="off">
+      <input id="edit-meaning" placeholder="Meaning (e.g. dog)" aria-label="Meaning" required autocomplete="off">
+      <input id="edit-note" placeholder="Note, optional (e.g. accusative case)" aria-label="Note" autocomplete="off">
+      <div class="form-actions">
+        <button type="button" id="cancel-edit">Cancel</button>
+        <button class="primary" type="submit">Save word</button>
+      </div>
+    </form>
+    <div class="example" id="sheet-example">
+      <p class="sentence"></p>
+      <p class="translation"></p>
+    </div>
+    <div id="sheet-actions" class="sheet-actions">
+      <button id="edit-word" class="editor-only">Edit</button>
+      <button id="add-word" class="primary">Add as card</button>
+    </div>
+  </aside>
+
+  <script src="content/pl.js"></script>
+  <script src="content/pl-grammar.js"></script>
+  <script src="content/es.js"></script>
+  <script src="app.js"></script>
+  <script src="reading.js"></script>
+  <script src="grammar.js"></script>
+</body>
+</html>
