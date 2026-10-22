@@ -19,6 +19,20 @@ const EDITOR = (() => {
 })();
 document.body.classList.toggle("editor", EDITOR);
 
+// Each language can bring its own colours (content/<lang>.js → theme: { light, dark }),
+// e.g. its flag's colours. Keys are the CSS tokens in style.css without the "--".
+function applyTheme(theme) {
+  if (!theme) return;
+  const vars = (palette) => Object.entries(palette || {}).map(([k, v]) => `--${k}: ${v};`).join(" ");
+  const style = document.createElement("style");
+  style.textContent = `
+    :root { ${vars(theme.light)} }
+    @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { ${vars(theme.dark)} } }
+    :root[data-theme="dark"] { ${vars(theme.dark)} }`;
+  document.head.append(style);
+}
+applyTheme(DECK.theme);
+
 // Days until next review for each Leitner box (box 0 = learning, due right away).
 const BOX_INTERVALS = [0, 1, 3, 7, 14, 30];
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -212,12 +226,13 @@ confirmTap($("reset"), "Tap again to replace all cards and progress", () => {
 
 // ---- Navigation ----
 
-// Switch to a view: "study", "read", "cards", or "grammar" (filled in by grammar.js).
+// Switch to a view: "home", "study", "read", "cards", or "grammar" (filled in by grammar.js).
 function showView(view) {
   document.querySelectorAll("nav button").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
   document.querySelectorAll(".view").forEach((v) => v.classList.toggle("active", v.id === view));
   closeSheet();
-  if (view === "study") { buildQueue(); showNext(); }
+  if (view === "home") renderHome();
+  else if (view === "study") { buildQueue(); showNext(); }
   else if (view === "read") renderReading();
   else if (view === "cards") renderList();
   window.scrollTo(0, 0);
@@ -227,11 +242,47 @@ document.querySelectorAll("nav button").forEach((btn) => {
   btn.addEventListener("click", () => showView(btn.dataset.view));
 });
 
+// The site name in the header goes back to the home page.
+document.querySelector("h1").addEventListener("click", () => showView("home"));
+
+// ---- Home ----
+
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+function renderHome() {
+  const home = DECK.home || {};
+  $("home-hello").textContent = home.hello || "";
+  $("home-hello").lang = LANG;
+  $("home-title").textContent = home.title || `Welcome to ${DECK.name}`;
+  $("home-intro").textContent = home.intro || "";
+
+  const due = cards.filter((c) => c.due <= Date.now()).length;
+  $("tile-study").textContent = due ? `${plural(due, "card")} to review` : "All caught up for today";
+  $("tile-read").textContent = plural(DECK.texts.length, "text");
+  $("tile-grammar").textContent = plural(DECK.grammar?.topics.length || 0, "topic");
+  $("tile-cards").textContent = plural(cards.length, "card");
+
+  // Word of the day: a starter card that changes once a day, the same for everyone.
+  const [word, meaning, example, exampleEn] = STARTER_DECK[Math.floor(Date.now() / DAY_MS) % STARTER_DECK.length];
+  $("wod-label").textContent = home.wordOfTheDay || "Word of the day";
+  $("wod-word").textContent = word;
+  $("wod-word").lang = LANG;
+  $("wod-meaning").textContent = meaning;
+  renderExample($("wod-example"), { example, exampleEn });
+}
+
+document.querySelectorAll(".tile").forEach((tile) => {
+  tile.addEventListener("click", () => {
+    // Grammar has no page of its own: open its first topic (the overview).
+    if (tile.dataset.go === "grammar") openTopic(DECK.grammar.topics[0].id);
+    else showView(tile.dataset.go);
+  });
+});
+
 // Mark target-language text so browsers use the right pronunciation and hyphenation.
 $("front").lang = LANG;
 $("new-front").lang = LANG;
 $("new-example").lang = LANG;
 document.querySelector("h1").textContent = `Lingo Cards · ${DECK.name}`;
 
-buildQueue();
-showNext();
+renderHome();

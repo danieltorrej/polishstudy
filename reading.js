@@ -193,6 +193,8 @@ $("text-form").addEventListener("submit", (e) => {
 function buildContentSource() {
   const content = {
     name: DECK.name,
+    home: DECK.home,
+    theme: DECK.theme,
     cards: DECK.cards,
     texts: allTexts().map(({ builtIn, ...t }) => t),
     glossary: { ...DECK.glossary, ...draftGlossary },

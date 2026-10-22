@@ -6,8 +6,8 @@
 const GRAMMAR = DECK.grammar || { topics: [], words: {} };
 const CASES = ["nominative", "accusative", "genitive", "dative", "locative", "instrumental", "vocative"];
 const PERSONS = ["ja", "ty", "on / ona / ono", "my", "wy", "oni / one"];
-const VIEW_LABELS = { study: "Study", read: "Read", cards: "My cards" };
-let grammarBackTo = "study"; // view the back button returns to
+const VIEW_LABELS = { home: "Home", study: "Study", read: "Read", cards: "My cards" };
+let grammarBackTo = "home"; // view the back button returns to
 
 function make(tag, className = "", text = "") {
   const node = document.createElement(tag);

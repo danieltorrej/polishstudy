@@ -14,7 +14,8 @@
       <h1>Lingo Cards</h1>
     </div>
     <nav>
-      <button data-view="study" class="active">Study</button>
+      <button data-view="home" class="active">Home</button>
+      <button data-view="study">Study</button>
       <button data-view="read">Read</button>
       <button data-view="cards">My cards</button>
     </nav>
@@ -38,8 +39,46 @@
       <article id="grammar-page" class="grammar-page"></article>
     </section>
 
+    <!-- Home: greeting, shortcuts to each section, word of the day -->
+    <section id="home" class="view active">
+      <div class="hero">
+        <p class="hero-hello" id="home-hello"></p>
+        <h2 id="home-title"></h2>
+        <p class="hero-intro" id="home-intro"></p>
+      </div>
+
+      <div class="tiles">
+        <button class="tile tile-main" data-go="study">
+          <span class="tile-name">Study</span>
+          <span class="tile-info" id="tile-study"></span>
+        </button>
+        <button class="tile" data-go="read">
+          <span class="tile-name">Read</span>
+          <span class="tile-info" id="tile-read"></span>
+        </button>
+        <button class="tile" data-go="grammar">
+          <span class="tile-name">Grammar</span>
+          <span class="tile-info" id="tile-grammar"></span>
+        </button>
+        <button class="tile" data-go="cards">
+          <span class="tile-name">My cards</span>
+          <span class="tile-info" id="tile-cards"></span>
+        </button>
+      </div>
+
+      <div class="word-of-day" id="word-of-day">
+        <p class="g-group" id="wod-label"></p>
+        <p class="wod-word" id="wod-word"></p>
+        <p class="wod-meaning" id="wod-meaning"></p>
+        <div class="example" id="wod-example">
+          <p class="sentence"></p>
+          <p class="translation"></p>
+        </div>
+      </div>
+    </section>
+
     <!-- Study view -->
-    <section id="study" class="view active">
+    <section id="study" class="view">
       <p class="stats" id="stats"></p>
 
       <div class="card" id="card" tabindex="0" aria-live="polite">
@@ -96,7 +135,7 @@
         <p class="reading-text" id="reading-text"></p>
         <p class="hint" id="reading-help">
           Tap any word to see what it means.
-          <span class="key key-known">dotted</span> = already in your cards.
+          <span class="key key-known">coloured dots</span> = already in your cards.
           <span class="editor-only"><span class="key key-new">dashed</span> = no meaning yet, tap to add one.</span>
         </p>
         <details id="translation-box">
