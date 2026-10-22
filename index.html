@@ -4,21 +4,35 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#d4213d">
-  <title>Lingo Cards</title>
+  <title>Polish Learning</title>
   <!-- ?v= makes browsers fetch fresh files after an update: change it on every publish. -->
-  <link rel="stylesheet" href="style.css?v=2026-10-22">
+  <link rel="stylesheet" href="style.css?v=2026-10-22b">
 </head>
 <body>
+  <script>
+    // Show unexpected errors on the page itself: some hosts (like claude.ai pages) hide the console.
+    window.addEventListener("error", (e) => {
+      let bar = document.getElementById("error-bar");
+      if (!bar) {
+        bar = document.createElement("div");
+        bar.id = "error-bar";
+        bar.className = "error-bar";
+        bar.setAttribute("role", "alert");
+        document.body.prepend(bar);
+      }
+      const where = e.filename ? ` (${e.filename.split("/").pop().split("?")[0]}, line ${e.lineno})` : "";
+      bar.textContent = `Something went wrong: ${e.message}${where}`;
+    });
+  </script>
   <header>
     <div class="brand">
       <button id="grammar-toggle" class="grammar-toggle" aria-controls="grammar-nav" aria-expanded="false">☰ Grammar</button>
-      <h1>Lingo Cards</h1>
+      <h1>Polish Learning</h1>
     </div>
     <nav>
       <button data-view="home" class="active">Home</button>
       <button data-view="study">Study</button>
       <button data-view="read">Read</button>
-      <button data-view="cards">My cards</button>
     </nav>
   </header>
 
@@ -61,10 +75,6 @@
           <span class="tile-name">Grammar</span>
           <span class="tile-info" id="tile-grammar"></span>
         </button>
-        <button class="tile" data-go="cards">
-          <span class="tile-name">My cards</span>
-          <span class="tile-info" id="tile-cards"></span>
-        </button>
       </div>
 
       <div class="word-of-day" id="word-of-day">
@@ -78,31 +88,17 @@
       </div>
     </section>
 
-    <!-- Study view -->
+    <!-- Study: lessons (list, or one lesson open) -->
     <section id="study" class="view">
-      <p class="stats" id="stats"></p>
-
-      <div class="card" id="card" tabindex="0" aria-live="polite">
-        <div class="front" id="front"></div>
-        <div class="back hidden" id="back">
-          <div id="meaning"></div>
-          <div class="example" id="example">
-            <p class="sentence"></p>
-            <p class="translation"></p>
-          </div>
+      <div id="lesson-index">
+        <div>
+          <p class="g-group">Study</p>
+          <h2>Lessons</h2>
+          <p class="stats" id="lesson-progress"></p>
         </div>
+        <div class="lesson-list" id="lesson-list"></div>
       </div>
-
-      <button id="reveal" class="primary">Show answer</button>
-      <div id="grade" class="grade hidden">
-        <button data-grade="again" class="again">Again</button>
-        <button data-grade="good" class="good">Got it</button>
-      </div>
-
-      <div id="done" class="done hidden">
-        <p>🎉 Nothing due right now. Come back later or add more cards.</p>
-        <button id="study-all">Practice all anyway</button>
-      </div>
+      <article class="lesson hidden" id="lesson"></article>
     </section>
 
     <!-- Reading view -->
@@ -143,7 +139,6 @@
         <div class="reading-text" id="reading-text"></div>
         <p class="hint" id="reading-help">
           Tap any word to see what it means.
-          <span class="key key-known">coloured dots</span> = already in your cards.
           <span class="editor-only"><span class="key key-new">dashed</span> = no meaning yet, tap to add one.</span>
         </p>
         <details id="translation-box">
@@ -153,19 +148,6 @@
         <section class="exercises hidden" id="exercises" aria-label="Exercises"></section>
         <button id="delete-text" class="link editor-only">Delete this draft</button>
       </div>
-    </section>
-
-    <!-- Card management view -->
-    <section id="cards" class="view">
-      <form id="add-form">
-        <input id="new-front" placeholder="Word or phrase (e.g. pies)" required autocomplete="off">
-        <input id="new-back" placeholder="Meaning (e.g. dog)" required autocomplete="off">
-        <input id="new-example" placeholder="Example sentence, optional (e.g. Mam małego *psa*.)" autocomplete="off">
-        <input id="new-example-en" placeholder="Sentence translation, optional (e.g. I have a small dog.)" autocomplete="off">
-        <button class="primary" type="submit">Add card</button>
-      </form>
-      <ul id="card-list"></ul>
-      <button id="reset" class="link">Reset to starter deck</button>
     </section>
   </main>
   </div>
@@ -196,17 +178,19 @@
       <p class="sentence"></p>
       <p class="translation"></p>
     </div>
-    <div id="sheet-actions" class="sheet-actions">
-      <button id="edit-word" class="editor-only">Edit</button>
-      <button id="add-word" class="primary">Add as card</button>
+    <div id="sheet-actions" class="sheet-actions editor-only">
+      <button id="edit-word">Edit</button>
     </div>
   </aside>
 
-  <script src="content/pl.js?v=2026-10-22"></script>
-  <script src="content/pl-grammar.js?v=2026-10-22"></script>
-  <script src="content/es.js?v=2026-10-22"></script>
-  <script src="app.js?v=2026-10-22"></script>
-  <script src="reading.js?v=2026-10-22"></script>
-  <script src="grammar.js?v=2026-10-22"></script>
+  <script src="content/pl.js?v=2026-10-22b"></script>
+  <script src="content/pl-grammar.js?v=2026-10-22b"></script>
+  <script src="content/pl-verbs.js?v=2026-10-22b"></script>
+  <script src="content/pl-lessons.js?v=2026-10-22b"></script>
+  <script src="content/es.js?v=2026-10-22b"></script>
+  <script src="app.js?v=2026-10-22b"></script>
+  <script src="reading.js?v=2026-10-22b"></script>
+  <script src="grammar.js?v=2026-10-22b"></script>
+  <script src="lessons.js?v=2026-10-22b"></script>
 </body>
 </html>

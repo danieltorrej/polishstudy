@@ -4,9 +4,11 @@
 // Uses $, LANG, DECK, showView and renderSentence from app.js.
 
 const GRAMMAR = DECK.grammar || { topics: [], words: {} };
+// Every verb with all its forms, from content/<lang>-verbs.js (see that file for the format).
+const VERBS = DECK.verbs || {};
 const CASES = ["nominative", "accusative", "genitive", "dative", "locative", "instrumental", "vocative"];
 const PERSONS = ["ja", "ty", "on / ona / ono", "my", "wy", "oni / one"];
-const VIEW_LABELS = { home: "Home", study: "Study", read: "Read", cards: "My cards" };
+const VIEW_LABELS = { home: "Home", study: "Study", read: "Read" };
 let grammarBackTo = "home"; // view the back button returns to
 
 function make(tag, className = "", text = "") {
@@ -58,7 +60,8 @@ function renderTable(head, rows, { hit, linkCases, polish } = {}) {
       if (i === 0 && linkCases && CASES.includes(cell)) td.append(topicLink(cell, cell));
       else renderRich(td, cell);
       if (i > 0 && polish) td.lang = LANG;
-      if (i > 0 && hit && cell.toLowerCase().split(/\s*\/\s*/).includes(hit)) td.classList.add("hit");
+      // Cells can hold several forms (“byłem/byłam”, “będę badał”); match any word in them.
+      if (i > 0 && hit && cell && cell.toLowerCase().split(/[\s/]+/).includes(hit)) td.classList.add("hit");
       tr.append(td);
     });
   }
@@ -109,8 +112,8 @@ function openGrammarPage(fill, activeTopic = null) {
   page.replaceChildren();
   fill(page);
   document.querySelectorAll(".g-nav-item").forEach((b) => b.classList.toggle("active", b.dataset.topic === activeTopic));
-  const activeItem = document.querySelector(".g-nav-item.active");
-  if (activeItem) activeItem.closest("details").open = true;
+  const group = document.querySelector(".g-nav-item.active")?.closest("details");
+  if (group) group.open = true;
   setDrawer(false);
   showView("grammar");
 }
@@ -124,8 +127,14 @@ function openTopic(id) {
   }, id);
 }
 
+// Whether a word has a page of its own forms (noun, adjective, verb…).
+function hasWordPage(lemma) {
+  return Boolean(GRAMMAR.words[lemma] || VERBS[lemma]);
+}
+
 // All forms of a word, with the form that was tapped highlighted.
 function openWordPage(lemma, form) {
+  if (VERBS[lemma] || GRAMMAR.words[lemma]?.type === "verb") { openVerbPage(lemma, form); return; }
   const word = GRAMMAR.words[lemma];
   if (!word) return;
   const hit = form?.toLowerCase();
@@ -140,27 +149,6 @@ function openWordPage(lemma, form) {
       const rows = CASES.map((c, i) => (word.pl ? [c, word.sg[i], word.pl[i]] : [c, word.sg[i]]));
       page.append(renderTable(word.pl ? ["Case", "Singular", "Plural"] : ["Case", "Singular"], rows, { hit, linkCases: true, polish: true }));
       page.append(renderSeeAlso(["cases", "gender", "plural"]));
-    } else if (word.type === "verb") {
-      if (word.aspect) {
-        // e.g. "Imperfective · perfective partner: zamówić (zamówię, zamówiłem) · About aspect"
-        const other = word.aspect === "imperfective" ? "perfective" : "imperfective";
-        const parts = [word.aspect[0].toUpperCase() + word.aspect.slice(1)];
-        if (word.partner) parts.push(`${other} partner: *${word.partner}*${word.partnerNote ? ` (${word.partnerNote})` : ""}`);
-        else if (word.partnerNote) parts.push(word.partnerNote);
-        const line = renderRich(make("p", "g-aspect"), parts.join(" · ") + " · ");
-        line.append(topicLink("aspect", "About aspect"));
-        page.append(line);
-      }
-      page.append(make("h3", "", "Present tense"), make("p", "g-note", `Pattern: ${word.pattern}`));
-      page.append(renderTable(null, PERSONS.map((p, i) => [p, word.present[i]]), { hit, polish: true }));
-      if (word.past) {
-        page.append(make("h3", "", "Past tense"));
-        if (word.pastNote) page.append(renderRich(make("p", "g-note"), word.pastNote));
-        const rows = PERSONS.map((p, i) => [p, word.past.m[i], word.past.f[i]]);
-        page.append(renderTable(["", "Men, male people", "Women, everyone else"], rows, { hit, polish: true }));
-        page.append(renderRich(make("p", "g-note"), `For “it” (ono): *${word.past.n}*`));
-      }
-      page.append(renderSeeAlso(["present-tense", "past-tense", "aspect"]));
     } else if (word.type === "adjective" || word.type === "possessive") {
       // Singular-only words (like każdy) have three columns per row instead of five.
       const head = ["Case", "Masculine", "Feminine", "Neuter", "Plural (male people)", "Plural (other)"]
@@ -180,6 +168,226 @@ function openWordPage(lemma, form) {
 
 $("grammar-back").addEventListener("click", () => showView(grammarBackTo));
 
+// ---- Verbs ----
+
+const ASPECT_NAMES = { i: "imperfective", p: "perfective" };
+const deaccent = (s) => s.normalize("NFD").replace(/\p{M}/gu, "").replace(/ł/g, "l").replace(/Ł/g, "L");
+
+// “-am, -asz” etc. from the ja and ty forms of the present tense.
+function presentPattern(pres) {
+  const [ja, ty] = (pres || []).map((f) => f && f.replace(/ się$/, ""));
+  if (!ja || !ty) return "";
+  if (/m$/.test(ja)) return /asz$/.test(ty) ? "-am, -asz" : /esz$/.test(ty) ? "-em, -esz" : "";
+  if (/ę$/.test(ja)) return /esz$/.test(ty) ? "-ę, -esz" : /[iy]sz$/.test(ty) ? "-ę, -isz / -ysz" : "";
+  return "";
+}
+
+// A verb's data, combining content/<lang>-verbs.js with any hand-written notes from the
+// grammar file (pattern notes, partner notes, stem-change notes).
+function verbData(lemma) {
+  const v = VERBS[lemma] || {};
+  const hand = GRAMMAR.words[lemma]?.type === "verb" ? GRAMMAR.words[lemma] : {};
+  const handPast = hand.past && hand.past.m.map((m, i) => [m, hand.past.f[i], i === 2 ? hand.past.n : null].filter(Boolean).join("/"));
+  return {
+    meaning: hand.meaning || v.m || "",
+    aspect: hand.aspect || ASPECT_NAMES[v.a] || "",
+    partner: hand.partner ?? v.p ?? null,
+    partnerNote: hand.partnerNote || "",
+    rel: v.rel || null,
+    relKind: v.relKind || null,
+    gov: v.g || "",
+    pattern: hand.pattern || presentPattern(v.pres || hand.present),
+    pastNote: hand.pastNote || "",
+    pres: v.pres || hand.present || null,
+    fut: v.fut || null,
+    past: v.past || handPast || null,
+    cond: v.cond || null,
+    imp: v.imp || null,
+  };
+}
+
+// A link to another verb's page (plain text if we don't have it).
+function verbLink(lemma) {
+  if (!VERBS[lemma] && GRAMMAR.words[lemma]?.type !== "verb") {
+    const plain = make("strong", "pl", lemma);
+    plain.lang = LANG;
+    return plain;
+  }
+  const link = make("button", "topic-link", lemma);
+  link.type = "button";
+  link.lang = LANG;
+  link.addEventListener("click", () => openVerbPage(lemma));
+  return link;
+}
+
+// Rows of “masculine/feminine(/neuter)” forms as a men / women table, plus the neuter.
+function genderTable(rows, hit) {
+  // Some verbs have gaps (impersonal verbs like brakować); show those as “—”.
+  const split = PERSONS.map((_, i) => (rows[i] || "").split("/"));
+  const table = renderTable(["", "Men, male people", "Women, everyone else"],
+    PERSONS.map((p, i) => [p, split[i][0] || "—", split[i][1] || "—"]), { hit, polish: true });
+  const neuter = split[2]?.[2];
+  return neuter ? [table, renderRich(make("p", "g-note"), `For “it” (ono): *${neuter}*`)] : [table];
+}
+
+function openVerbPage(lemma, form) {
+  const v = verbData(lemma);
+  const hit = form?.toLowerCase();
+  openGrammarPage((page) => {
+    const back = make("button", "topic-link", "← All verbs A–Z");
+    back.type = "button";
+    back.addEventListener("click", () => openVerbIndex());
+    page.append(back, make("p", "g-group", ["verb", v.aspect].filter(Boolean).join(" · ")));
+    const title = make("h2", "", lemma);
+    title.lang = LANG;
+    page.append(title, make("p", "g-meaning", v.meaning));
+
+    // Aspect, partner and related verbs.
+    const line = make("p", "g-aspect");
+    if (v.aspect) line.append(v.aspect[0].toUpperCase() + v.aspect.slice(1));
+    if (v.partner) {
+      line.append(` · ${v.aspect === "perfective" ? "imperfective" : "perfective"} partner: `, verbLink(v.partner));
+      if (v.partnerNote) line.append(` (${v.partnerNote.replace(/\*/g, "")})`);
+    } else if (v.partnerNote) {
+      line.append(" · ", renderRich(make("span"), v.partnerNote));
+    }
+    if (v.rel) {
+      line.append(v.relKind === "motion" ? " · motion-verb pair: " : v.relKind === "frequentative" ? " · “from time to time” form: " : " · related: ", verbLink(v.rel));
+    }
+    line.append(" · ", topicLink("aspect", "About aspect"));
+    page.append(line);
+    if (v.relKind === "motion") {
+      page.append(renderRich(make("p", "g-note"), "Motion verbs come in pairs: one for a single trip in one direction, happening now (*iść, jechać*), and one for going regularly, back and forth or in general (*chodzić, jeździć*)."));
+    }
+    if (v.gov) page.append(renderRich(make("p", "g-note"), `Used with: *${v.gov}* (the question words show which case follows).`));
+
+    if (v.pres) {
+      page.append(make("h3", "", "Present tense"));
+      if (v.pattern) page.append(make("p", "g-note", `Pattern: ${v.pattern}`));
+      page.append(renderTable(null, PERSONS.map((p, i) => [p, v.pres[i] || "—"]), { hit, polish: true }));
+    }
+    if (v.fut) {
+      page.append(make("h3", "", "Future tense"));
+      page.append(make("p", "g-note", v.aspect === "perfective"
+        ? "Perfective verbs have no present tense: these present-looking forms mean the future."
+        : "będę, będziesz… + the past form (or the infinitive)."));
+      page.append(renderTable(null, PERSONS.map((p, i) => [p, v.fut[i] || "—"]), { hit, polish: true }));
+    }
+    if (v.past) {
+      page.append(make("h3", "", "Past tense"));
+      if (v.pastNote) page.append(renderRich(make("p", "g-note"), v.pastNote));
+      page.append(...genderTable(v.past, hit));
+    }
+    if (v.imp && v.imp.some(Boolean)) {
+      page.append(make("h3", "", "Commands"));
+      page.append(renderTable(null, [
+        ["to one person (ty)", v.imp[0] || "—"],
+        ["to several people (wy)", v.imp[1] || "—"],
+        ["let's… (my)", v.imp[2] || "—"],
+      ], { hit, polish: true }));
+    }
+    if (v.cond) {
+      const more = make("details", "g-more");
+      more.append(make("summary", "", "Would… (conditional)"));
+      more.append(...genderTable(v.cond, hit));
+      if (v.cond.some((f) => f && f.split(/[\s/]+/).includes(hit))) more.open = true;
+      page.append(more);
+    }
+    page.append(renderSeeAlso(["present-tense", "past-tense", "aspect"]));
+    if (hit && hit !== lemma.toLowerCase()) {
+      page.append(renderRich(make("p", "hint"), `The form you tapped, *${form}*, is highlighted.`));
+    }
+  }, "verbs");
+}
+
+// Search text for every verb: infinitive, meaning and all forms, without accents, so
+// “wejsc”, “poszedl” or “to eat” all find their verb.
+const VERB_NAMES = Object.keys(VERBS).sort((a, b) => a.localeCompare(b, "pl"));
+let verbSearchIndex = null;
+function verbSearchText(name) {
+  const v = VERBS[name];
+  const forms = [v.pres, v.fut, v.past, v.cond, v.imp].flat().filter(Boolean).join(" ");
+  return { name: deaccent(name.toLowerCase()), meaning: (v.m || "").toLowerCase(), forms: ` ${deaccent(forms.toLowerCase()).replace(/\//g, " ")} ` };
+}
+
+function openVerbIndex() {
+  verbSearchIndex ||= Object.fromEntries(VERB_NAMES.map((n) => [n, verbSearchText(n)]));
+  openGrammarPage((page) => {
+    page.append(make("p", "g-group", "Verbs"), make("h2", "", "Verbs A–Z"));
+    page.append(renderRich(make("p", "g-note"),
+      `${VERB_NAMES.length} verbs with all their forms. Search for an infinitive (*wejść*), any form (*poszedł*) or an English meaning (“to eat”). Polish letters are optional: *wejsc* works too.`));
+
+    const search = make("input", "verb-search");
+    search.type = "search";
+    search.id = "verb-search";
+    search.placeholder = "Search verbs… e.g. wejsc, poszedł, to eat";
+    search.setAttribute("aria-label", "Search verbs");
+    search.autocomplete = "off";
+    const letters = make("nav", "letter-bar");
+    letters.setAttribute("aria-label", "Jump to letter");
+    const count = make("p", "g-note");
+    const list = make("div", "verb-list");
+    page.append(search, letters, count, list);
+
+    const row = (name) => {
+      const v = VERBS[name];
+      const btn = make("button", "verb-row");
+      btn.type = "button";
+      const n = make("span", "verb-name", name);
+      n.lang = LANG;
+      btn.append(n, make("span", `aspect-badge ${v.a === "p" ? "pf" : "impf"}`, v.a === "p" ? "perf." : "imperf."), make("span", "verb-meaning", v.m || ""));
+      btn.addEventListener("click", () => openVerbPage(name));
+      return btn;
+    };
+
+    const render = () => {
+      const q = deaccent(search.value.trim().toLowerCase());
+      list.replaceChildren();
+      let names = VERB_NAMES;
+      if (q) {
+        // Best matches first: the infinitive itself, then infinitives starting with it,
+        // then verbs with a matching form, then English meanings.
+        const score = (n) => {
+          const s = verbSearchIndex[n];
+          if (s.name === q) return 0;
+          if (s.name.startsWith(q)) return 1;
+          if (s.forms.includes(` ${q} `)) return 2;
+          if (s.name.includes(q)) return 3;
+          if (s.forms.includes(` ${q}`)) return 4;
+          if (s.meaning.includes(q)) return 5;
+          return 9;
+        };
+        names = VERB_NAMES.map((n) => [n, score(n)]).filter(([, s]) => s < 9).sort((a, b) => a[1] - b[1]).map(([n]) => n);
+        for (const n of names) list.append(row(n));
+        count.textContent = names.length ? `${names.length} found` : "No verbs found. Try fewer letters, or search in English.";
+        letters.classList.add("hidden");
+        return;
+      }
+      // No search: the whole list, A–Z, with a heading for each letter.
+      letters.classList.remove("hidden");
+      letters.replaceChildren();
+      count.textContent = "";
+      let letter = null;
+      for (const n of names) {
+        const first = n[0].toUpperCase();
+        if (first !== letter) {
+          letter = first;
+          const heading = make("h3", "verb-letter", first);
+          heading.id = `verbs-${first}`;
+          list.append(heading);
+          const jump = make("button", "letter", first);
+          jump.type = "button";
+          jump.addEventListener("click", () => heading.scrollIntoView({ behavior: "smooth", block: "start" }));
+          letters.append(jump);
+        }
+        list.append(row(n));
+      }
+    };
+    search.addEventListener("input", render);
+    render();
+  }, "verbs");
+}
+
 // ---- Sidebar ----
 
 // Each group (Cases, Nouns…) folds open and closed. Which groups are open is
@@ -190,6 +398,14 @@ const openGroups = new Set(loadJSON(NAV_OPEN_KEY, []));
 function renderGrammarNav() {
   const nav = $("grammar-topics");
   nav.replaceChildren();
+  if (VERB_NAMES.length) {
+    const verbs = make("button", "g-nav-item g-nav-verbs");
+    verbs.type = "button";
+    verbs.dataset.topic = "verbs";
+    verbs.append(make("span", "", "Verbs A–Z"), make("span", "g-nav-count", String(VERB_NAMES.length)));
+    verbs.addEventListener("click", () => openVerbIndex());
+    nav.append(verbs);
+  }
   if (!GRAMMAR.topics.length) { nav.append(make("p", "hint", "No grammar topics for this language yet.")); return; }
   for (const group of new Set(GRAMMAR.topics.map((t) => t.group))) {
     const topics = GRAMMAR.topics.filter((t) => t.group === group);

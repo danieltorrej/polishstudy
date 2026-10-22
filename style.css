@@ -103,32 +103,7 @@ main { flex: 1; min-width: 0; max-width: 640px; margin: 0 auto; padding: 24px 16
 
 .stats { color: var(--muted); text-align: center; margin: 0; }
 
-.card {
-  min-height: 220px;
-  padding: 24px;
-  border-radius: 16px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  box-shadow: 0 4px 16px rgb(0 0 0 / 0.06);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  text-align: center;
-  cursor: pointer;
-}
-
-.front { font-size: 2rem; font-weight: 600; }
-.back { font-size: 1.25rem; color: var(--muted); border-top: 1px solid var(--border); padding-top: 16px; width: 100%; }
-
 .primary { background: var(--button); color: var(--on-button); border-color: var(--button); }
-
-.grade { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.again { background: var(--again); color: #fff; border-color: var(--again); }
-.good { background: var(--good); color: #fff; border-color: var(--good); }
-
-.done { text-align: center; }
 
 form { display: flex; flex-direction: column; gap: 8px; }
 
@@ -150,14 +125,6 @@ li {
   border-radius: 10px;
 }
 
-li .row { display: flex; align-items: center; gap: 8px; }
-li.has-example .row { cursor: pointer; }
-li.has-example .term { text-decoration: underline dotted; text-underline-offset: 3px; }
-li .term { font-weight: 600; }
-li .meaning { color: var(--muted); flex: 1; }
-li button { padding: 4px 10px; }
-li .example { margin-top: 10px; padding: 10px 12px; text-align: left; }
-
 .example {
   border-radius: 10px;
   background: var(--bg);
@@ -177,6 +144,56 @@ mark {
   font-weight: 600;
 }
 
+.error-bar { padding: 10px 16px; background: var(--again); color: #fff; font-size: 0.9rem; }
+
+/* ---- Study: lessons ---- */
+
+#lesson-index, .lesson { display: flex; flex-direction: column; gap: 16px; }
+#lesson-index h2 { margin: 2px 0 4px; font-size: 1.5rem; }
+.lesson-list { display: flex; flex-direction: column; gap: 8px; }
+.lesson-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  text-align: left;
+}
+.lesson-item:hover { border-color: var(--accent); }
+.lesson-num {
+  display: grid;
+  place-items: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  background: var(--tint);
+  color: var(--on-tint);
+  font-weight: 700;
+}
+.lesson-item.done .lesson-num { background: var(--good); color: #fff; }
+.lesson-item.next { border-color: var(--accent); }
+.lesson-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lesson-title { font-weight: 700; }
+.lesson-sub { color: var(--muted); font-size: 0.9rem; }
+.lesson-badge { padding: 2px 10px; border-radius: 999px; background: var(--button); color: var(--on-button); font-size: 0.8rem; }
+.lesson-badge:empty { display: none; }
+
+.lesson .back-to-lessons { align-self: flex-start; }
+.lesson-head h2 { margin: 6px 0 2px; font-size: 1.6rem; text-wrap: balance; }
+.lesson-head .stats { text-align: left; }
+.lesson-goals { padding: 12px 16px; border-radius: 14px; background: var(--tint); color: var(--on-tint); }
+.lesson-goals h3 { margin: 0 0 6px; font-size: 1rem; }
+.lesson-part { display: flex; flex-direction: column; gap: 8px; }
+.lesson-part h3 { margin: 0; font-size: 1.25rem; }
+.lesson-part .stats { text-align: left; margin-top: -4px; }
+.lesson-part.culture { padding: 16px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface); }
+.lesson-part details summary { cursor: pointer; color: var(--accent); }
+.lesson-translation p { margin: 6px 0 0; color: var(--muted); }
+.reading-text .speaker { color: var(--accent); font-weight: 700; font-size: 0.85em; }
+.phrases .pl-cell { font-weight: 600; }
+.lesson-footer { display: flex; flex-wrap: wrap; gap: 8px; }
+
 /* ---- Home ---- */
 
 h1 { cursor: pointer; }
@@ -186,8 +203,8 @@ h1 { cursor: pointer; }
 #home h2 { margin: 0; font-size: 1.5rem; text-wrap: balance; }
 .hero-intro { margin: 0; max-width: 60ch; color: var(--muted); line-height: 1.5; }
 
-/* Study across the top, then the other three sections in a row. */
-.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+/* Study across the top, then Read and Grammar side by side. */
+.tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 
 .tile {
   display: flex;
@@ -293,7 +310,6 @@ h2 { margin: 0; font-size: 1.4rem; }
 }
 
 .word:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
-.word.known, .key-known { text-decoration: underline dotted var(--accent); text-underline-offset: 5px; }
 body.editor .word.new, .key-new { text-decoration: underline dashed var(--muted); text-underline-offset: 5px; }
 
 /* Content-authoring tools only appear in editor mode (?editor). */
@@ -386,6 +402,38 @@ details summary { cursor: pointer; color: var(--accent); }
 }
 
 .g-group { margin: 0; }
+
+/* Verbs A–Z: menu entry, search, letter bar and list. */
+.g-nav-verbs { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-weight: 600; }
+.g-nav-verbs .g-nav-count { margin-left: auto; }
+
+.verb-search { width: 100%; font-size: 1.05rem; padding: 12px 14px; }
+.letter-bar { display: flex; flex-wrap: wrap; gap: 4px; }
+.letter-bar .letter { min-width: 2.2rem; padding: 4px 8px; border-radius: 8px; background: var(--tint); color: var(--on-tint); border-color: var(--tint-strong); }
+.verb-list { display: flex; flex-direction: column; gap: 4px; }
+.verb-letter { margin: 14px 0 4px; scroll-margin-top: 16px; color: var(--accent); }
+.verb-row {
+  display: grid;
+  grid-template-columns: minmax(7rem, auto) auto 1fr;
+  align-items: baseline;
+  gap: 4px 12px;
+  width: 100%;
+  padding: 8px 12px;
+  text-align: left;
+  border-radius: 10px;
+}
+.verb-row:hover { border-color: var(--accent); }
+.verb-name { font-weight: 600; }
+.verb-meaning { min-width: 0; color: var(--muted); font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aspect-badge { padding: 1px 8px; border-radius: 999px; font-size: 0.75rem; background: var(--tint); color: var(--on-tint); }
+.aspect-badge.pf { background: var(--tint-strong); }
+@media (max-width: 480px) {
+  .verb-row { grid-template-columns: 1fr auto; }
+  .verb-meaning { grid-column: 1 / -1; }
+}
+.grammar-page > .topic-link { align-self: flex-start; }
+.g-more summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
+.g-more[open] summary { margin-bottom: 8px; }
 
 /* Collapsible groups in the grammar menu. */
 .g-nav-section { margin-top: 6px; }

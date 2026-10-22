@@ -1,6 +1,6 @@
 // Reading mode: texts where every word can be tapped to see its meaning in its
-// sentence, and added as a card. Uses cards, save, makeCard and renderSentence
-// from app.js.
+// sentence, with links to its full forms and grammar. Uses $, LANG, DECK, EDITOR,
+// confirmTap and renderSentence from app.js.
 //
 // Texts and the glossary come from content/<lang>.js. In editor mode (?editor) you
 // can also write new texts and word meanings. Those are saved as drafts on this
@@ -36,13 +36,10 @@ function allTexts() {
 }
 
 // Draft meanings take priority over the built-in glossary, so built-in words can be corrected.
+// Lessons bring their own word list (content/<lang>-lessons.js), used after the main one.
 function lookup(form) {
   const key = form.toLowerCase();
-  return draftGlossary[key] || DECK.glossary[key] || null;
-}
-
-function isCard(lemma) {
-  return cards.some((c) => c.front.toLowerCase() === lemma.toLowerCase());
+  return draftGlossary[key] || DECK.glossary[key] || DECK.lessonGlossary?.[key] || null;
 }
 
 // Split text into sentences, keeping closing quotes/brackets with their sentence.
@@ -87,19 +84,41 @@ function renderText(text) {
     return;
   }
 
-  body.lang = LANG;
   $("reading-title").lang = LANG;
+  renderTapText(body, text.sentences, translationBox);
+  // Translations that didn't line up sentence by sentence are kept as one block.
+  if (text.translation) {
+    const p = document.createElement("p");
+    p.textContent = text.translation;
+    translationBox.append(p);
+  }
+  $("translation-box").classList.toggle("hidden", !translationBox.childElementCount);
+  renderExercises(text.exercises);
+  refreshWordStates();
+}
 
+// Fill `body` with sentences where every word can be tapped, and put each sentence's
+// translation in `translationBox`. Used by Read texts and Study lessons.
+// A sentence is [text, translation] or [text, translation, speaker]. Dialogue lines
+// (with a speaker, or starting with a dash) each get a line of their own, like in a book;
+// narration in between runs together as a paragraph.
+function renderTapText(body, sentences, translationBox) {
+  body.lang = LANG;
+  body.classList.add("tap-text");
   let para = null;
   let prevDialogue = false;
-  for (const [sentence, translation] of text.sentences) {
-    // Dialogue lines start with a dash and each get a line of their own, like in a book;
-    // narration in between runs together as a paragraph.
-    const dialogue = /^[—–-]\s/.test(sentence);
+  for (const [sentence, translation, speaker] of sentences) {
+    const dialogue = Boolean(speaker) || /^[—–-]\s/.test(sentence);
     if (!para || dialogue || prevDialogue) {
       para = document.createElement("p");
       para.className = dialogue ? "line dialogue" : "line";
       body.append(para);
+      if (speaker) {
+        const who = document.createElement("span");
+        who.className = "speaker";
+        who.textContent = `${speaker}: `;
+        para.append(who);
+      }
     }
     prevDialogue = dialogue;
 
@@ -123,21 +142,12 @@ function renderText(text) {
     });
     para.append(" ");
 
-    if (translation) {
+    if (translation && translationBox) {
       const p = document.createElement("p");
-      p.textContent = translation;
+      p.textContent = speaker ? `${speaker}: ${translation}` : translation;
       translationBox.append(p);
     }
   }
-  // Translations that didn't line up sentence by sentence are kept as one block.
-  if (text.translation) {
-    const p = document.createElement("p");
-    p.textContent = text.translation;
-    translationBox.append(p);
-  }
-  $("translation-box").classList.toggle("hidden", !translationBox.childElementCount);
-  renderExercises(text.exercises);
-  refreshWordStates();
 }
 
 // ---- Exercises ("Check yourself" after a text) ----
@@ -156,8 +166,8 @@ function el(tag, className, text) {
   return node;
 }
 
-function renderExercises(ex) {
-  const box = $("exercises");
+// `box` is the element to fill; `prefix` keeps the gap inputs' ids unique per page.
+function renderExercises(ex, box = $("exercises"), prefix = "gap") {
   box.replaceChildren();
   box.classList.toggle("hidden", !ex);
   if (!ex) return;
@@ -192,7 +202,7 @@ function renderExercises(ex) {
       line.lang = LANG;
       const [before, after = ""] = sentence.split("___");
       const input = el("input", "gap-input");
-      input.id = `gap-${i}`;
+      input.id = `${prefix}-${i}`;
       input.lang = LANG;
       input.autocomplete = "off";
       input.spellcheck = false;
@@ -238,12 +248,10 @@ function checkGap(input) {
   }
 }
 
-// Mark words that are already cards, and words that have no meaning yet.
+// Mark words that have no meaning yet (shown dashed in editor mode).
 function refreshWordStates() {
-  document.querySelectorAll("#reading-text .word").forEach((w) => {
-    const entry = lookup(w.dataset.form);
-    w.classList.toggle("new", !entry);
-    w.classList.toggle("known", Boolean(entry) && isCard(entry[0]));
+  document.querySelectorAll(".tap-text .word").forEach((w) => {
+    w.classList.toggle("new", !lookup(w.dataset.form));
   });
 }
 
@@ -318,13 +326,13 @@ function buildContentSource() {
     texts: allTexts().map(({ builtIn, ...t }) => t),
     glossary: { ...DECK.glossary, ...draftGlossary },
   };
-  // Keep short lists of strings (cards, sentences, glossary entries) on one line.
+  // Keep short lists of strings (words, sentences, glossary entries) on one line.
   // JSON strings can't contain raw newlines, so splitting on them is safe.
   const json = JSON.stringify(content, null, 2).replace(
     /\[\n\s*((?:"(?:[^"\\]|\\.)*",?\n\s*)+)\]/g,
     (_, items) => `[${items.trim().split(/,\n\s*/).join(", ")}]`,
   );
-  return `// ${DECK.name} content for Lingo Cards: starter cards, reading texts and glossary.
+  return `// ${DECK.name} content for Polish Learning: starter words, reading texts and glossary.
 // Exported from editor mode on ${new Date().toISOString().slice(0, 10)}. Same format as before:
 // edit by hand, or replace with a newer export.
 window.CONTENT ??= {};
@@ -377,14 +385,10 @@ function showWordView() {
   // Links into the grammar section: the word's full table, and the case its note mentions.
   const links = $("sheet-links");
   links.replaceChildren();
-  if (entry && GRAMMAR.words[lemma]) links.append(topicLinkTo("See all forms →", () => openWordPage(lemma, form)));
+  if (entry && hasWordPage(lemma)) links.append(topicLinkTo("See all forms →", () => openWordPage(lemma, form)));
   const caseName = note && CASES.find((c) => note.toLowerCase().includes(c));
   if (caseName) links.append(topicLinkTo(`About the ${caseName} →`, () => openTopic(caseName)));
   links.classList.toggle("hidden", !links.childElementCount);
-
-  const known = Boolean(entry) && isCard(lemma);
-  $("add-word").disabled = !entry || known;
-  $("add-word").textContent = known ? "✓ In your cards" : "Add as card";
 }
 
 function topicLinkTo(label, onClick) {
@@ -430,14 +434,6 @@ $("cancel-edit").addEventListener("click", () => {
 });
 
 $("edit-word").addEventListener("click", showWordEdit);
-
-$("add-word").addEventListener("click", () => {
-  const [lemma, meaning] = lookup(currentWord.form);
-  cards.unshift(makeCard(lemma, meaning, currentWord.example, currentWord.translation));
-  save();
-  showWordView();
-  refreshWordStates();
-});
 
 function closeSheet() {
   $("sheet").classList.add("hidden");
