@@ -227,9 +227,57 @@ h1 { cursor: pointer; }
 #read { padding-bottom: 300px; } /* room to scroll text above the word sheet */
 
 h2 { margin: 0; font-size: 1.4rem; }
+
+/* CEFR level of a text (A1–C2). */
+.level-badge {
+  display: inline-block;
+  margin-bottom: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--tint);
+  color: var(--on-tint);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.field-inline { display: flex; align-items: center; gap: 10px; color: var(--muted); }
 #reading-subtitle { text-align: left; margin-top: 4px; }
 
 .reading-text { font-size: 1.3rem; line-height: 2; margin: 0; }
+.reading-text .line { margin: 0 0 0.4em; }
+.reading-text .dialogue { margin: 0; }
+
+/* "Check yourself" exercises after a text. */
+.exercises {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--tint);
+  color: var(--on-tint);
+}
+
+.ex-title { margin: 0; font-size: 1.2rem; }
+.ex-heading { margin: 8px 0 0; font-size: 1rem; }
+.ex-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; counter-reset: ex; }
+.ex-list li { display: flex; flex-direction: column; gap: 4px; color: var(--text); counter-increment: ex; }
+.ex-list li > :first-child::before { content: counter(ex) ". "; color: var(--muted); }
+.ex-q, .ex-answer, .gap-sentence, .gap-hint, .gap-feedback, .gap-help { margin: 0; }
+.ex-q { font-weight: 600; }
+.ex-list .translation { margin: 0; color: var(--muted); font-size: 0.9rem; }
+.ex-answer { color: var(--accent); font-weight: 600; }
+.ex-list .topic-link { align-self: flex-start; }
+.gap-help { font-size: 0.9rem; opacity: 0.85; }
+.gap-sentence { font-size: 1.1rem; line-height: 2.2; }
+.gap-input { width: auto; max-width: 100%; margin: 0 4px; padding: 2px 8px; font-weight: 600; }
+.gap-input.ok { border-color: var(--good); background: color-mix(in srgb, var(--good) 14%, var(--surface)); }
+.gap-input.bad { border-color: var(--again); }
+.gap-hint { color: var(--muted); font-size: 0.85rem; }
+.gap-feedback { font-size: 0.9rem; }
+.gap-feedback:empty { display: none; }
+.ex-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
 .word {
   font: inherit;
@@ -339,6 +387,28 @@ details summary { cursor: pointer; color: var(--accent); }
 
 .g-group { margin: 0; }
 
+/* Collapsible groups in the grammar menu. */
+.g-nav-section { margin-top: 6px; }
+.g-nav-section > summary.g-nav-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 8px;
+  border-radius: 8px;
+  color: var(--on-tint);
+  cursor: pointer;
+  list-style: none;
+}
+.g-nav-section > summary::-webkit-details-marker { display: none; }
+.g-nav-section > summary::after { content: "›"; margin-left: auto; font-size: 1.1rem; transition: transform 0.15s ease; }
+.g-nav-section[open] > summary::after { transform: rotate(90deg); }
+.g-nav-section > summary:hover { background: color-mix(in srgb, var(--tint-strong) 60%, transparent); }
+.g-nav-section > summary:focus-visible { outline: 2px solid var(--accent); }
+.g-nav-count { font-weight: 400; opacity: 0.7; letter-spacing: 0; }
+.g-nav-section .g-nav-item { padding-left: 18px; }
+@media (prefers-reduced-motion: reduce) { .g-nav-section > summary::after { transition: none; } }
+
 .g-nav-item {
   display: block;
   width: 100%;
@@ -388,6 +458,7 @@ details summary { cursor: pointer; color: var(--accent); }
 .grammar-page .example { margin: 0; }
 .g-meaning { font-size: 1.15rem; }
 .g-note { color: var(--muted); }
+.g-aspect { padding: 8px 12px; border-radius: 10px; background: var(--tint); color: var(--on-tint); }
 .g-see { color: var(--muted); font-size: 0.95rem; }
 
 strong.pl { color: var(--accent); font-weight: 600; }
@@ -410,7 +481,8 @@ table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
 th, td { padding: 8px 12px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
 tr:last-child > * { border-bottom: none; }
 thead th { background: var(--bg); color: var(--muted); font-size: 0.85rem; font-weight: 600; }
-tbody th { font-weight: 600; white-space: nowrap; }
+tbody th { font-weight: 600; min-width: 6rem; }
+td { min-width: 6rem; }
 td.hit { background: color-mix(in srgb, var(--accent) 25%, transparent); font-weight: 700; }
 .sheet-edit-heading { margin: 0; padding-right: 48px; font-weight: 600; }
 .sheet-actions { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; }

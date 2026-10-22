@@ -119,6 +119,12 @@
       <form id="text-form" class="hidden">
         <input id="text-title" placeholder="Title (e.g. Moja rodzina)" required autocomplete="off">
         <input id="text-title-en" placeholder="English title, optional (e.g. My family)" autocomplete="off">
+        <label class="field-inline" for="text-level">Level
+          <select id="text-level">
+            <option>A1</option><option>A2</option><option>B1</option>
+            <option>B2</option><option>C1</option><option>C2</option>
+          </select>
+        </label>
         <textarea id="text-body" rows="7" placeholder="Paste or type Polish text…" required></textarea>
         <textarea id="text-translation" rows="4" placeholder="English translation, optional. With the same number of sentences, each sentence gets its own translation."></textarea>
         <div class="form-actions">
@@ -129,10 +135,11 @@
 
       <div id="reading-body">
         <div>
+          <span class="level-badge" id="reading-level"></span>
           <h2 id="reading-title"></h2>
           <p class="stats" id="reading-subtitle"></p>
         </div>
-        <p class="reading-text" id="reading-text"></p>
+        <div class="reading-text" id="reading-text"></div>
         <p class="hint" id="reading-help">
           Tap any word to see what it means.
           <span class="key key-known">coloured dots</span> = already in your cards.
@@ -142,6 +149,7 @@
           <summary>Show English translation</summary>
           <div id="reading-translation"></div>
         </details>
+        <section class="exercises hidden" id="exercises" aria-label="Exercises"></section>
         <button id="delete-text" class="link editor-only">Delete this draft</button>
       </div>
     </section>

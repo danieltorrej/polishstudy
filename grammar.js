@@ -109,6 +109,8 @@ function openGrammarPage(fill, activeTopic = null) {
   page.replaceChildren();
   fill(page);
   document.querySelectorAll(".g-nav-item").forEach((b) => b.classList.toggle("active", b.dataset.topic === activeTopic));
+  const activeItem = document.querySelector(".g-nav-item.active");
+  if (activeItem) activeItem.closest("details").open = true;
   setDrawer(false);
   showView("grammar");
 }
@@ -139,9 +141,26 @@ function openWordPage(lemma, form) {
       page.append(renderTable(word.pl ? ["Case", "Singular", "Plural"] : ["Case", "Singular"], rows, { hit, linkCases: true, polish: true }));
       page.append(renderSeeAlso(["cases", "gender", "plural"]));
     } else if (word.type === "verb") {
+      if (word.aspect) {
+        // e.g. "Imperfective · perfective partner: zamówić (zamówię, zamówiłem) · About aspect"
+        const other = word.aspect === "imperfective" ? "perfective" : "imperfective";
+        const parts = [word.aspect[0].toUpperCase() + word.aspect.slice(1)];
+        if (word.partner) parts.push(`${other} partner: *${word.partner}*${word.partnerNote ? ` (${word.partnerNote})` : ""}`);
+        else if (word.partnerNote) parts.push(word.partnerNote);
+        const line = renderRich(make("p", "g-aspect"), parts.join(" · ") + " · ");
+        line.append(topicLink("aspect", "About aspect"));
+        page.append(line);
+      }
       page.append(make("h3", "", "Present tense"), make("p", "g-note", `Pattern: ${word.pattern}`));
       page.append(renderTable(null, PERSONS.map((p, i) => [p, word.present[i]]), { hit, polish: true }));
-      page.append(renderSeeAlso(["present-tense"]));
+      if (word.past) {
+        page.append(make("h3", "", "Past tense"));
+        if (word.pastNote) page.append(renderRich(make("p", "g-note"), word.pastNote));
+        const rows = PERSONS.map((p, i) => [p, word.past.m[i], word.past.f[i]]);
+        page.append(renderTable(["", "Men, male people", "Women, everyone else"], rows, { hit, polish: true }));
+        page.append(renderRich(make("p", "g-note"), `For “it” (ono): *${word.past.n}*`));
+      }
+      page.append(renderSeeAlso(["present-tense", "past-tense", "aspect"]));
     } else if (word.type === "adjective" || word.type === "possessive") {
       // Singular-only words (like każdy) have three columns per row instead of five.
       const head = ["Case", "Masculine", "Feminine", "Neuter", "Plural (male people)", "Plural (other)"]
@@ -163,19 +182,34 @@ $("grammar-back").addEventListener("click", () => showView(grammarBackTo));
 
 // ---- Sidebar ----
 
+// Each group (Cases, Nouns…) folds open and closed. Which groups are open is
+// remembered on this device; the group of the topic you're reading always opens.
+const NAV_OPEN_KEY = "lingo-grammar-open";
+const openGroups = new Set(loadJSON(NAV_OPEN_KEY, []));
+
 function renderGrammarNav() {
   const nav = $("grammar-topics");
   nav.replaceChildren();
   if (!GRAMMAR.topics.length) { nav.append(make("p", "hint", "No grammar topics for this language yet.")); return; }
   for (const group of new Set(GRAMMAR.topics.map((t) => t.group))) {
-    nav.append(make("h3", "g-nav-group", group));
-    for (const t of GRAMMAR.topics.filter((t) => t.group === group)) {
+    const topics = GRAMMAR.topics.filter((t) => t.group === group);
+    const section = make("details", "g-nav-section");
+    section.open = openGroups.has(group);
+    const summary = make("summary", "g-nav-group");
+    summary.append(make("span", "", group), make("span", "g-nav-count", String(topics.length)));
+    section.append(summary);
+    for (const t of topics) {
       const item = make("button", "g-nav-item", t.title);
       item.type = "button";
       item.dataset.topic = t.id;
       item.addEventListener("click", () => openTopic(t.id));
-      nav.append(item);
+      section.append(item);
     }
+    section.addEventListener("toggle", () => {
+      if (section.open) openGroups.add(group); else openGroups.delete(group);
+      saveJSON(NAV_OPEN_KEY, [...openGroups]);
+    });
+    nav.append(section);
   }
 }
 

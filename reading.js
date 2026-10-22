@@ -58,7 +58,8 @@ function renderReading() {
   if (!texts.some((t) => t.id === currentTextId)) currentTextId = texts[0]?.id ?? null;
 
   const picker = $("text-picker");
-  picker.replaceChildren(...texts.map((t) => new Option(t.builtIn ? t.title : `${t.title} (draft)`, t.id)));
+  const label = (t) => [t.level, t.title].filter(Boolean).join(" · ") + (t.builtIn ? "" : " (draft)");
+  picker.replaceChildren(...texts.map((t) => new Option(label(t), t.id)));
   picker.classList.toggle("hidden", texts.length < 2 && !EDITOR);
   if (currentTextId) picker.value = currentTextId;
 
@@ -73,22 +74,40 @@ function renderText(text) {
   body.replaceChildren();
   translationBox.replaceChildren();
   $("reading-title").textContent = text ? text.title : "No texts yet";
+  $("reading-level").textContent = text?.level ? `Level ${text.level}` : "";
+  $("reading-level").classList.toggle("hidden", !text?.level);
   $("reading-subtitle").textContent = text
     ? text.builtIn ? text.titleEn || "" : "Draft: only on this device until you export it"
     : EDITOR ? "Tap “+ New text” to write one." : "Reading texts are coming soon.";
   $("reading-help").classList.toggle("hidden", !text);
   $("delete-text").classList.toggle("hidden", !text || text.builtIn);
-  if (!text) { $("translation-box").classList.add("hidden"); return; }
+  if (!text) {
+    $("translation-box").classList.add("hidden");
+    renderExercises(null);
+    return;
+  }
 
   body.lang = LANG;
   $("reading-title").lang = LANG;
 
+  let para = null;
+  let prevDialogue = false;
   for (const [sentence, translation] of text.sentences) {
+    // Dialogue lines start with a dash and each get a line of their own, like in a book;
+    // narration in between runs together as a paragraph.
+    const dialogue = /^[—–-]\s/.test(sentence);
+    if (!para || dialogue || prevDialogue) {
+      para = document.createElement("p");
+      para.className = dialogue ? "line dialogue" : "line";
+      body.append(para);
+    }
+    prevDialogue = dialogue;
+
     // Split into words and the spaces/punctuation between them.
     const parts = sentence.split(/(\p{L}+)/u);
     parts.forEach((part, i) => {
       if (!part) return;
-      if (!/\p{L}/u.test(part)) { body.append(part); return; }
+      if (!/\p{L}/u.test(part)) { para.append(part); return; }
 
       const btn = document.createElement("button");
       btn.type = "button";
@@ -100,9 +119,9 @@ function renderText(text) {
         const example = parts.map((p, j) => (j === i ? `*${p}*` : p)).join("");
         openWord(btn, { form: part, example, translation });
       });
-      body.append(btn);
+      para.append(btn);
     });
-    body.append(" ");
+    para.append(" ");
 
     if (translation) {
       const p = document.createElement("p");
@@ -117,7 +136,106 @@ function renderText(text) {
     translationBox.append(p);
   }
   $("translation-box").classList.toggle("hidden", !translationBox.childElementCount);
+  renderExercises(text.exercises);
   refreshWordStates();
+}
+
+// ---- Exercises ("Check yourself" after a text) ----
+// text.exercises = {
+//   questions: [[question, English translation, answer], ...]   answer shown on tap
+//   gaps: [[sentence with ___, answer, hint], ...]                typed in and checked
+// }
+
+const normalizeAnswer = (s) => s.trim().toLowerCase().replace(/\s+/g, " ").replace(/[.!?,;:]+$/, "");
+const withoutAccents = (s) => s.normalize("NFD").replace(/\p{M}/gu, "").replace(/ł/g, "l");
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text) node.textContent = text;
+  return node;
+}
+
+function renderExercises(ex) {
+  const box = $("exercises");
+  box.replaceChildren();
+  box.classList.toggle("hidden", !ex);
+  if (!ex) return;
+  box.append(el("h3", "ex-title", "Check yourself"));
+
+  if (ex.questions?.length) {
+    box.append(el("h4", "ex-heading", "Questions"));
+    const list = el("ol", "ex-list");
+    for (const [question, english, answer] of ex.questions) {
+      const item = el("li");
+      const q = el("p", "ex-q", question);
+      q.lang = LANG;
+      const reveal = el("button", "topic-link", "Show answer");
+      reveal.type = "button";
+      reveal.addEventListener("click", () => {
+        const a = el("p", "ex-answer", answer);
+        a.lang = LANG;
+        reveal.replaceWith(a);
+      });
+      item.append(q, el("p", "translation", english), reveal);
+      list.append(item);
+    }
+    box.append(list);
+  }
+
+  if (ex.gaps?.length) {
+    box.append(el("h4", "ex-heading", "Fill in the gaps"), el("p", "gap-help", "Type the missing word and press Enter."));
+    const list = el("ol", "ex-list");
+    ex.gaps.forEach(([sentence, answer, hint], i) => {
+      const item = el("li");
+      const line = el("p", "gap-sentence");
+      line.lang = LANG;
+      const [before, after = ""] = sentence.split("___");
+      const input = el("input", "gap-input");
+      input.id = `gap-${i}`;
+      input.lang = LANG;
+      input.autocomplete = "off";
+      input.spellcheck = false;
+      input.size = Math.max(5, answer.length + 2);
+      input.dataset.answer = answer;
+      input.setAttribute("aria-label", `Gap ${i + 1}`);
+      input.addEventListener("keydown", (e) => { if (e.key === "Enter") checkGap(input); });
+      line.append(before, input, after);
+      item.append(line, el("p", "gap-hint", hint), el("p", "gap-feedback"));
+      list.append(item);
+    });
+    box.append(list);
+
+    const actions = el("div", "ex-actions");
+    const check = el("button", "primary", "Check answers");
+    const show = el("button", "", "Show answers");
+    check.type = show.type = "button";
+    check.addEventListener("click", () => box.querySelectorAll(".gap-input").forEach(checkGap));
+    show.addEventListener("click", () => box.querySelectorAll(".gap-input").forEach((input) => {
+      input.value = input.dataset.answer;
+      checkGap(input);
+    }));
+    actions.append(check, show);
+    box.append(actions);
+  }
+}
+
+function checkGap(input) {
+  const given = normalizeAnswer(input.value);
+  const wanted = normalizeAnswer(input.dataset.answer);
+  const feedback = input.closest("li").querySelector(".gap-feedback");
+  input.classList.remove("ok", "bad");
+  if (!given) { feedback.textContent = ""; return; }
+  if (given === wanted) {
+    input.classList.add("ok");
+    feedback.textContent = "✓ Correct";
+  } else if (withoutAccents(given) === withoutAccents(wanted)) {
+    input.classList.add("bad");
+    feedback.textContent = "Almost: check the Polish letters (ą, ę, ł, ó, ś…).";
+  } else {
+    input.classList.add("bad");
+    feedback.textContent = "Not quite. Try again, or tap “Show answers”.";
+  }
 }
 
 // Mark words that are already cards, and words that have no meaning yet.
@@ -175,6 +293,7 @@ $("text-form").addEventListener("submit", (e) => {
   const aligned = translations.length === sentences.length;
   const text = {
     id: slugify(title),
+    level: $("text-level").value,
     title,
     titleEn: $("text-title-en").value.trim(),
     sentences: sentences.map((s, i) => [s, aligned ? translations[i] : ""]),
