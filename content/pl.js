@@ -1,6 +1,8 @@
 // Polish content for Lingo Cards: starter cards, reading texts and glossary.
 // Edit by hand, or replace with the file from "Export content file" in editor mode (?editor).
 //
+// home:     greeting and text for the home page.
+// theme:    colours for this language (light and dark), using the token names in style.css.
 // cards:    [word, meaning, example sentence, sentence translation]. Wrap the word inside the
 //           sentence in *asterisks* to highlight it, so inflected forms can be marked too.
 // texts:    { id, title, titleEn, sentences: [[sentence, translation], ...] }
@@ -8,6 +10,24 @@
 window.CONTENT ??= {};
 CONTENT.pl = {
   "name": "Polish",
+  "home": {
+    "hello": "Witaj!",
+    "title": "Welcome to Polish",
+    "intro": "Learn words with flashcards, read short stories where you can tap any word, and look up grammar whenever you need it.",
+    "wordOfTheDay": "Słowo dnia · Word of the day"
+  },
+  "theme": {
+    "light": {
+      "bg": "#ffffff", "surface": "#ffffff", "text": "#141414", "muted": "#6b6163", "border": "#ecdcdf",
+      "accent": "#d4213d", "tint": "#fcebee", "tint-strong": "#f5c9d1", "on-tint": "#6e1424",
+      "button": "#141414", "on-button": "#ffffff"
+    },
+    "dark": {
+      "bg": "#4f222c", "surface": "#5e2b36", "text": "#fff6f7", "muted": "#e2c2c8", "border": "#7a4350",
+      "accent": "#ffb1bd", "tint": "#673140", "tint-strong": "#884555", "on-tint": "#ffffff",
+      "button": "#fff6f7", "on-button": "#4f222c"
+    }
+  },
   "cards": [
     ["cześć", "hi / bye (informal)", "*Cześć*, jak leci?", "Hi, how's it going?"],
     ["dzień dobry", "good morning / hello (formal)", "*Dzień dobry*, poproszę kawę.", "Good morning, a coffee please."],
