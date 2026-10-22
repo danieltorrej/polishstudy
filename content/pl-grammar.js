@@ -1,4 +1,4 @@
-// Polish grammar for Lingo Cards: topic pages for the Grammar sidebar, and full
+// Polish grammar for Polish Learning: topic pages for the Grammar sidebar, and full
 // forms of words for "See all forms" in the reading panel. Load after content/pl.js.
 // Explanations are written for this app; facts checked against
 // "Polish: A Comprehensive Grammar" (Routledge), which uses the same case order.

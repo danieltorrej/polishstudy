@@ -1,4 +1,4 @@
-// Polish content for Lingo Cards: starter cards, reading texts and glossary.
+// Polish content for Polish Learning: starter cards, reading texts and glossary.
 // Edit by hand, or replace with the file from "Export content file" in editor mode (?editor).
 //
 // home:     greeting and text for the home page.
@@ -13,7 +13,7 @@ CONTENT.pl = {
   "home": {
     "hello": "Witaj!",
     "title": "Welcome to Polish",
-    "intro": "Learn words with flashcards, read short stories where you can tap any word, and look up grammar whenever you need it.",
+    "intro": "Follow lessons with real-life dialogues, read short stories where you can tap any word, and look up grammar and verbs whenever you need them.",
     "wordOfTheDay": "Słowo dnia · Word of the day"
   },
   "theme": {

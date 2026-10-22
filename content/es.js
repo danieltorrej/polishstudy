@@ -1,4 +1,4 @@
-// Spanish content for Lingo Cards. Same format as content/pl.js.
+// Spanish content for Polish Learning. Same format as content/pl.js.
 window.CONTENT ??= {};
 CONTENT.es = {
   "name": "Spanish",
